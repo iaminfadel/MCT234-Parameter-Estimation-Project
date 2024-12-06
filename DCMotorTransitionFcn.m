@@ -1,33 +1,71 @@
-function x = DCMotorTransitionFcn(x) 
-% vdpStateFcn Discrete-time approximation to van der Pol ODEs for mu = 1. 
-% Sample time is 0.05s.
-%
-% Example state transition function for discrete-time nonlinear state
-% estimators.
-%
-% xk1 = vdpStateFcn(xk)
-%
+function [x_next] = DCMotorTransitionFcn(x, u, dt)
+% State Transition Function for DC Motor Dual Estimator
+% 
 % Inputs:
-%    xk - States x[k]
+%   x       - Extended state vector 
+%   u       - Input vector [voltage]
+%   dt      - Time step (discretization interval)
+%   params  - Initial parameter estimates
 %
 % Outputs:
-%    xk1 - Propagated states x[k+1]
+%   x_next  - Next state vector after time update
 %
-% See also extendedKalmanFilter, unscentedKalmanFilter
+% Extended State Vector Components:
+%   x(1)  - Angular position (θ)
+%   x(2)  - Angular velocity (ω)
+%   x(3)  - Motor current (i)
+%   x(4)  - Estimated moment of inertia (J)
+%   x(5)  - Estimated viscous friction (b)
+%   x(6)  - Estimated back-EMF constant (Ke)
+%   x(7)  - Estimated torque constant (Kt)
+%   x(8)  - Estimated electrical resistance (R)
+%   x(9)  - Estimated electrical inductance (L)
 
-%   Copyright 2016 The MathWorks, Inc.
+% Extract current states and parameter estimates
+theta = x(1);
+omega = x(2);
+i = x(3);
 
-%#codegen
+% Parameter estimates
+J_est = x(4);
+b_est = x(5);
+Ke_est = x(6);
+Kt_est = x(7);
+R_est = x(8);
+L_est = x(9);
 
-% The tag %#codegen must be included if you wish to generate code with 
-% MATLAB Coder.
+% Input voltage
+V = u(1);
 
-% Euler integration of continuous-time dynamics x'=f(x) with sample time dt
-dt = 0.05; % [s] Sample time
-x = x + vdpStateFcnContinuous(x)*dt;
-end
+% State Update Equations with Parameter Estimates
+% Position update
+dtheta = omega * dt;
 
-function dxdt = vdpStateFcnContinuous(x)
-%vdpStateFcnContinuous Evaluate the van der Pol ODEs for mu = 1
-dxdt = [x(2); (1-x(1)^2)*x(2)-x(1)];
+% Velocity update (using estimated parameters)
+domega = ((1/J_est) * (Kt_est*i - b_est*omega)) * dt;
+
+% Current update (using estimated parameters)
+di = ((1/L_est) * (V - R_est*i - Ke_est*omega)) * dt;
+
+% Simple parameter evolution model
+% These can be adjusted based on expected parameter variability
+dJ = 0;      % Moment of inertia typically constant
+db = 0;      % Friction coefficient slow-changing
+dKe = 0;     % Back-EMF constant relatively stable
+dKt = 0;     % Torque constant relatively stable
+dR = 0;      % Resistance can change with temperature
+dL = 0;      % Inductance typically stable
+
+% Construct next state vector
+x_next = [
+    theta + dtheta;     % Updated position
+    omega + domega;     % Updated velocity
+    i + di;             % Updated current
+    J_est + dJ;         % Estimated J (nearly constant)
+    b_est + db;         % Estimated b 
+    Ke_est + dKe;       % Estimated Ke
+    Kt_est + dKt;       % Estimated Kt
+    R_est + dR;         % Estimated R
+    L_est + dL;         % Estimated L
+];
 end
