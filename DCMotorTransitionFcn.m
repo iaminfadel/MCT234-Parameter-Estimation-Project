@@ -1,4 +1,4 @@
-function [x_next] = DCMotorTransitionFcn(x, u, dt)
+function [x_next] = DCMotorTransitionFcn(x, u)
 % State Transition Function for DC Motor Dual Estimator
 % 
 % Inputs:
@@ -20,19 +20,18 @@ function [x_next] = DCMotorTransitionFcn(x, u, dt)
 %   x(7)  - Estimated torque constant (Kt)
 %   x(8)  - Estimated electrical resistance (R)
 %   x(9)  - Estimated electrical inductance (L)
-
+dt = 0.001;
 % Extract current states and parameter estimates
 theta = x(1);
 omega = x(2);
 i = x(3);
-
+Kt_est = 0.01;
 % Parameter estimates
 J_est = x(4);
 b_est = x(5);
 Ke_est = x(6);
-Kt_est = x(7);
-R_est = x(8);
-L_est = x(9);
+R_est = x(7);
+L_est = x(8);
 
 % Input voltage
 V = u(1);
@@ -64,7 +63,6 @@ x_next = [
     J_est + dJ;         % Estimated J (nearly constant)
     b_est + db;         % Estimated b 
     Ke_est + dKe;       % Estimated Ke
-    Kt_est + dKt;       % Estimated Kt
     R_est + dR;         % Estimated R
     L_est + dL;         % Estimated L
 ];
