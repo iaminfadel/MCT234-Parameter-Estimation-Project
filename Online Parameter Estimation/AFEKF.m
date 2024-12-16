@@ -29,16 +29,14 @@ else
 end
 
 if nargin < 9 || isempty(varargin{5})
-    Kt = 0.01;           % Torque constant
-    Ra = 1;
-    Kb = 0.01;
-    La = 0.1;
+    Ra = 2;
+    K = 0.01;
 else
-    Kt = varargin{5};
+    K = varargin{5};
 end
 
 % Sample time (to be set in Simulink)
-Ts = 0.0001;  % Default sample time, should match Simulink setting
+Ts = 0.001;  % Default sample time, should match Simulink setting
 
 persistent P;  % Covariance matrix
 persistent lambda;  % Fading factor
@@ -55,12 +53,12 @@ switch flag
         
         sys = simsizes(sizes);
         
-        % Initial state estimates (include Kt)
-        x0 = [0;   % θ
-              0;   % ω
+        % Initial state estimates (include K)
+        x0 = [0;   % ω
               0;   % ia
+              0.1;   % La
               0.1; % Jeq
-              0.1 % Deq
+              0.0 % Deq
              ];
         
         % Initialize covariance matrix
@@ -79,10 +77,10 @@ switch flag
         y = u(2);   % Measured angle
         
         % Nonlinear discrete-time state prediction with parameter evolution
-        x_pred = discrete_state_update(x, Va, Ts, Kt, Kb, Ra, La);
+        x_pred = discrete_state_update(x, Va, Ts, K, Ra);
         
         % Compute Jacobians
-        [F, H] = compute_discrete_jacobians(x, Va, Ts, Kt, Kb, Ra, La);
+        [F, H] = compute_discrete_jacobians(x, Va, Ts, K, Ra);
         
         % Adaptive Fading Mechanism
         %lambda = max(1, gamma * (innovation'*innovation));
@@ -115,48 +113,48 @@ end
 end
 
 % Separate function for discrete-time state update
-function x_next = discrete_state_update(x, Va, Ts, Kt, Kb, Ra, La)
+function x_next = discrete_state_update(x, Va, Ts, K, Ra)
     % State vector unpacking
-    theta = x(1);
-    omega = x(2);
-    ia = x(3);
-    Jeq = x(4);
-    Deq = x(5);
-    
+    omega = x(1);
+    ia = x(2);
+    Jeq = x(3);
+    Deq = x(4);
+    La = x(5);
     % Discrete-time state equations (Euler approximation)
     x_next = x(1:5);
     
     % Kinematic and dynamic equations
-    x_next(1) = theta + Ts * omega;  % θ
-    x_next(2) = omega + Ts * ((1/Jeq) * (Kt*ia - Deq*omega));  % ω
-    x_next(3) = ia + Ts * ((1/La) * (Va - Ra*ia - Kb*omega));  % ia
+    x_next(1) = omega + Ts * ((1/Jeq) * (K*ia - Deq*omega));  % ω
+    x_next(2) = ia + Ts * ((1/La) * (Va - Ra*ia - K*omega));  % ia
     
     % Parameter evolution with slight random walk
     % Add small random noise to allow parameter estimation
-    x_next(4) = Jeq ; % Jeq with minimal drift 
-    x_next(5) = Deq ; % Deq with minimal drift
+    x_next(3) = Jeq ; % Jeq with minimal drift 
+    x_next(4) = Deq ; % Deq with minimal drift
+    x_next(5) = La ; % Deq with minimal drift
+
 end
 
 % Separate function for Jacobian computation
-function [F, H] = compute_discrete_jacobians(x, Va, Ts, Kt, Kb, Ra, La)
+function [F, H] = compute_discrete_jacobians(x, Va, Ts, K, Ra)
     % State vector
-    theta = x(1);
-    omega = x(2);
-    ia = x(3);
-    Jeq = x(4);
-    Deq = x(5);
-    
+    omega = x(1);
+    ia = x(2);
+    Jeq = x(3);
+    Deq = x(4);
+    La = x(5);
+
     % Discrete-time state transition Jacobian
     F = eye(5);
-    F(1,2) = Ts;  % dtheta/domega
-    F(2,2) = 1 - (Ts*Deq/Jeq);  % domega/domega
-    F(2,3) = Ts*(Kt/Jeq);  % domega/dia
-    F(2,4) = -Ts*(Kt*ia + Deq*omega)/(Jeq^2);  % domega/dJeq
-    F(2,5) = -Ts*omega/Jeq;  % domega/dDeq
-    
-    F(3,2) = -Ts*(Kb/La);  % dia/domega
-    F(3,3) = 1 - Ts*(Ra/La);  % dia/dia
-
+    F(1,1) = 1 - (Ts*Deq/Jeq);  % domega/domega
+    F(1,2) = Ts*(K/Jeq);  % domega/dia
+    F(1,3) = -Ts*(K*ia + Deq*omega)/(Jeq^2);  % domega/dJeq
+    F(1,4) = -Ts*omega/Jeq;  % domega/dDeq
+    F(1,5) = 0;  % domega/dLa
+  
+    F(2,1) = -Ts*(K/La);  % dia/domega
+    F(2,2) = 1 - Ts*(Ra/La);  % dia/dia
+    F(2,5) = -Ts*(Va - Ra*ia - K*omega)/La^2;  % dia/dLa
 
     % Measurement Jacobian (only angle is measured)
     H = [1, 0, 0, 0, 0];
