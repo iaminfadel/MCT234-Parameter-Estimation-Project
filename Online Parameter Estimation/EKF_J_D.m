@@ -7,7 +7,7 @@ else
 end
 
 if nargin < 6 || isempty(varargin{2})
-    Q = diag([ 1.2; 5.01; 2.3; 0.03]);   % Process noise covariance
+    Q = diag([ 1.2; 5.01; 0.03; 0.03]);   % Process noise covariance
 else
     Q = varargin{2};
 end
@@ -19,7 +19,7 @@ else
 end
 
 if nargin < 8 || isempty(varargin{4})
-    lambda =1;  % Forgetting factor (between 0 and 1)
+    lambda =0.999;  % Forgetting factor (between 0 and 1)
 else
     lambda = varargin{4};
 end
