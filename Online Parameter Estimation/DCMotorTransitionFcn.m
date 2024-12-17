@@ -20,50 +20,40 @@ function [x_next] = DCMotorTransitionFcn(x, u)
 %   x(7)  - Estimated torque constant (Kt)
 %   x(8)  - Estimated electrical resistance (R)
 %   x(9)  - Estimated electrical inductance (L)
-dt = 0.001;
-% Extract current states and parameter estimates
-theta = x(1);
-omega = x(2);
-i = x(3);
-Kt_est = 0.01;
-% Parameter estimates
-J_est = x(4);
-b_est = x(5);
-Ke_est = x(6);
-R_est = x(7);
-L_est = x(8);
+dt = 5e-3;
+R = 5.4;
+K = 0.018;
 
+% Extract current states and parameter estimates
+omega = x(1);
+i = x(2);
+% Parameter estimates
+J = x(3);
+B = x(4);
+L = x(5);
 % Input voltage
 V = u(1);
 
 % State Update Equations with Parameter Estimates
-% Position update
-dtheta = omega * dt;
 
 % Velocity update (using estimated parameters)
-domega = ((1/J_est) * (Kt_est*i - b_est*omega)) * dt;
+domega = ((1/J) * (K*i - B*omega)) * dt;
 
 % Current update (using estimated parameters)
-di = ((1/L_est) * (V - R_est*i - Ke_est*omega)) * dt;
+di = ((1/L) * (V - R*i - K*omega)) * dt;
 
 % Simple parameter evolution model
 % These can be adjusted based on expected parameter variability
 dJ = 0;      % Moment of inertia typically constant
 db = 0;      % Friction coefficient slow-changing
-dKe = 0;     % Back-EMF constant relatively stable
-dKt = 0;     % Torque constant relatively stable
-dR = 0;      % Resistance can change with temperature
 dL = 0;      % Inductance typically stable
 
 % Construct next state vector
 x_next = [
-    theta + dtheta;     % Updated position
     omega + domega;     % Updated velocity
     i + di;             % Updated current
-    J_est + dJ;         % Estimated J (nearly constant)
-    b_est + db;         % Estimated b 
-    Ke_est + dKe;       % Estimated Ke
-    R_est + dR;         % Estimated R
-    L_est + dL;         % Estimated L
+    J + dJ;         % Estimated J (nearly constant)
+    B + db;         % Estimated b 
+    L + dL;         % Estimated L
 ];
 end

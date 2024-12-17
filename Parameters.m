@@ -1,11 +1,12 @@
 K = 0.018; 
 Ra = 5.4;
-La = 0.0005;
-Meq = 0.1;
-Deq = 0.003;
+La = 0.05;
+Meq = 10;
+Deq = 0.3;
 PulsePerMM = 108.5;
 PulleyDiameter = 13; %mm
 GR = 1/97.5; % Gear Ratio
 P2R = 1/44; % Pulse 2 Rev
 P2M = 1/105; % Pulse 2 mm
-Ts = 0.1;
+Ts = 5e-3;
+Fc = 0.15;
